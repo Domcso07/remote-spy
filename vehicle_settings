@@ -1,0 +1,166 @@
+-- Services
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local workspace = game:GetService("Workspace")
+
+-- Vehicle folder
+local vehicle_folder = workspace:WaitForChild("Vehicles")
+
+-- GUI
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "VehicleSettings"
+Gui.IgnoreGuiInset = true
+Gui.Parent = playerGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 400, 0, 400)
+Frame.Position = UDim2.new(0.5, -200, 0.5, -200)
+Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = Gui
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(45,45,45)
+Title.Text = "Vehicle Settings"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+Title.Parent = Frame
+
+-- Vehicle list
+local VehicleList = Instance.new("ScrollingFrame")
+VehicleList.Size = UDim2.new(0.4, -10, 1, -40)
+VehicleList.Position = UDim2.new(0,5,0,35)
+VehicleList.BackgroundColor3 = Color3.fromRGB(25,25,25)
+VehicleList.BorderSizePixel = 0
+VehicleList.ScrollBarThickness = 6
+VehicleList.Parent = Frame
+
+local UIListLayout_Vehicles = Instance.new("UIListLayout")
+UIListLayout_Vehicles.Parent = VehicleList
+UIListLayout_Vehicles.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_Vehicles.Padding = UDim.new(0,2)
+
+-- Value list
+local ValueList = Instance.new("ScrollingFrame")
+ValueList.Size = UDim2.new(0.55, -10, 0.5, -10)
+ValueList.Position = UDim2.new(0.42, 5, 0, 35)
+ValueList.BackgroundColor3 = Color3.fromRGB(25,25,25)
+ValueList.BorderSizePixel = 0
+ValueList.ScrollBarThickness = 6
+ValueList.Parent = Frame
+
+local UIListLayout_Values = Instance.new("UIListLayout", ValueList)
+UIListLayout_Values.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_Values.Padding = UDim.new(0,2)
+
+-- TextBox + Apply button
+local ValueBox = Instance.new("TextBox")
+ValueBox.Size = UDim2.new(0.55, -10, 0, 28)
+ValueBox.Position = UDim2.new(0.42, 5, 0.52, 0)
+ValueBox.PlaceholderText = "Új érték"
+ValueBox.ClearTextOnFocus = false
+ValueBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
+ValueBox.TextColor3 = Color3.fromRGB(255,255,255)
+ValueBox.Font = Enum.Font.Code
+ValueBox.TextSize = 14
+ValueBox.Parent = Frame
+
+local ApplyBtn = Instance.new("TextButton")
+ApplyBtn.Size = UDim2.new(0.55, -10, 0, 28)
+ApplyBtn.Position = UDim2.new(0.42, 5, 0.6, 0)
+ApplyBtn.Text = "Apply"
+ApplyBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+ApplyBtn.TextColor3 = Color3.new(1,1,1)
+ApplyBtn.Font = Enum.Font.SourceSans
+ApplyBtn.TextSize = 14
+ApplyBtn.Parent = Frame
+
+-- Variables
+local selectedVehicle = nil
+local selectedValue = nil -- lehet StringValue vagy NumberValue
+
+-- Update Value list
+local function updateValueList(model)
+for _, child in ipairs(ValueList:GetChildren()) do
+    if child:IsA("TextButton") then
+        child:Destroy()
+    end
+end
+    selectedValue = nil
+
+    local seat = model:FindFirstChild("Seats")
+    if not seat then return end
+
+    local vehicleSeat = seat:FindFirstChild("VehicleSeat")
+    if not vehicleSeat then return end
+
+    for _, obj in ipairs(vehicleSeat:GetChildren()) do
+        -- Csak StringValue vagy NumberValue típusokra
+        if obj:IsA("StringValue") or obj:IsA("NumberValue") then
+            -- Csak a Turbo és MaxSpeed kell
+            if obj.Name == "Turbo" or obj.Name == "MaxSpeed" then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -6, 0, 22)
+                btn.BackgroundColor3 = Color3.fromRGB(28,28,28)
+                btn.TextColor3 = Color3.fromRGB(220,220,220)
+                btn.Text = obj.Name.." = "..tostring(obj.Value)
+                btn.Font = Enum.Font.SourceSans
+                btn.TextSize = 14
+                btn.Parent = ValueList
+
+                btn.MouseButton1Click:Connect(function()
+                    selectedValue = obj
+                    ValueBox.Text = tostring(obj.Value)
+                end)
+            end
+        end
+    end
+end
+
+-- Populate vehicle list
+for _, vehicle in ipairs(vehicle_folder:GetChildren()) do
+    if vehicle:IsA("Model") then
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -6, 0, 22)
+        btn.BackgroundColor3 = Color3.fromRGB(28,28,28)
+        btn.TextColor3 = Color3.fromRGB(220,220,220)
+        btn.Text = vehicle.Name
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 14
+        btn.Parent = VehicleList
+
+        btn.MouseButton1Click:Connect(function()
+            selectedVehicle = vehicle
+            updateValueList(vehicle)
+        end)
+    end
+end
+
+UIListLayout_Vehicles:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    VehicleList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Vehicles.AbsoluteContentSize.Y)
+end)
+
+UIListLayout_Values:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ValueList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Values.AbsoluteContentSize.Y)
+end)
+
+-- Apply button
+ApplyBtn.MouseButton1Click:Connect(function()
+    if selectedValue then
+        if selectedValue:IsA("StringValue") then
+            selectedValue.Value = ValueBox.Text
+        elseif selectedValue:IsA("NumberValue") then
+            local num = tonumber(ValueBox.Text)
+            if num then
+                selectedValue.Value = num
+                selectedValue.Parent.MaxSpeed = num
+            end
+        end
+    end
+end)

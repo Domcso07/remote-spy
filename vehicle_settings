@@ -7,150 +7,296 @@ local workspace = game:GetService("Workspace")
 -- Vehicle folder
 local vehicle_folder = workspace:WaitForChild("Vehicles")
 
+-- Turbo Levels
+local TurboLevels = {
+    [1] = 16.1,
+    [2] = 27.9,
+    [3] = 44.5,
+    [4] = 61.1
+}
+
 -- GUI
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "VehicleSettings"
 Gui.IgnoreGuiInset = true
+Gui.ResetOnSpawn = false
 Gui.Parent = playerGui
 
+-- Main Frame
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 400, 0, 400)
-Frame.Position = UDim2.new(0.5, -200, 0.5, -200)
+Frame.Size = UDim2.new(0.35, 0, 0.45, 0)
+Frame.Position = UDim2.new(0.325, 0, 0.275, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
 Frame.Parent = Gui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+local UIStroke = Instance.new("UIStroke", Frame)
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(70,70,70)
 
 -- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Size = UDim2.new(1, 0, 0, 36)
 Title.BackgroundColor3 = Color3.fromRGB(45,45,45)
-Title.Text = "Vehicle Settings"
+Title.Text = "🚗 Vehicle Settings"
 Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = Enum.Font.SourceSansBold
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.Parent = Frame
+Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
 
--- Vehicle list
+-- Info Box
+local InfoBox = Instance.new("Frame")
+InfoBox.Size = UDim2.new(1, -10, 0, 50)
+InfoBox.Position = UDim2.new(0,5,0,38)
+InfoBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
+InfoBox.BorderSizePixel = 0
+InfoBox.Parent = Frame
+Instance.new("UICorner", InfoBox).CornerRadius = UDim.new(0,6)
+local strokeInfo = Instance.new("UIStroke", InfoBox)
+strokeInfo.Color = Color3.fromRGB(60,60,60)
+strokeInfo.Thickness = 1
+
+-- Selected labels
+local SelectedVehicleLbl = Instance.new("TextLabel")
+SelectedVehicleLbl.Size = UDim2.new(1,-10,0,24)
+SelectedVehicleLbl.Position = UDim2.new(0,5,0,2)
+SelectedVehicleLbl.BackgroundTransparency = 1
+SelectedVehicleLbl.Text = "Selected Vehicle: -"
+SelectedVehicleLbl.TextColor3 = Color3.fromRGB(200,200,200)
+SelectedVehicleLbl.Font = Enum.Font.Gotham
+SelectedVehicleLbl.TextSize = 14
+SelectedVehicleLbl.TextXAlignment = Enum.TextXAlignment.Left
+SelectedVehicleLbl.TextWrapped = true
+SelectedVehicleLbl.TextTruncate = Enum.TextTruncate.AtEnd
+SelectedVehicleLbl.Parent = InfoBox
+
+local SelectedValueLbl = Instance.new("TextLabel")
+SelectedValueLbl.Size = UDim2.new(1,-10,0,20)
+SelectedValueLbl.Position = UDim2.new(0,5,0,26)
+SelectedValueLbl.BackgroundTransparency = 1
+SelectedValueLbl.Text = "Selected Value: -"
+SelectedValueLbl.TextColor3 = Color3.fromRGB(200,200,200)
+SelectedValueLbl.Font = Enum.Font.Gotham
+SelectedValueLbl.TextSize = 14
+SelectedValueLbl.TextXAlignment = Enum.TextXAlignment.Left
+SelectedValueLbl.TextTruncate = Enum.TextTruncate.AtEnd
+SelectedValueLbl.Parent = InfoBox
+
+-- Vehicle List
 local VehicleList = Instance.new("ScrollingFrame")
-VehicleList.Size = UDim2.new(0.4, -10, 1, -40)
-VehicleList.Position = UDim2.new(0,5,0,35)
+VehicleList.Size = UDim2.new(0.4,-10,1,-100)
+VehicleList.Position = UDim2.new(0,5,0,90)
 VehicleList.BackgroundColor3 = Color3.fromRGB(25,25,25)
 VehicleList.BorderSizePixel = 0
 VehicleList.ScrollBarThickness = 6
 VehicleList.Parent = Frame
-
-local UIListLayout_Vehicles = Instance.new("UIListLayout")
-UIListLayout_Vehicles.Parent = VehicleList
+Instance.new("UICorner", VehicleList).CornerRadius = UDim.new(0,6)
+local UIListLayout_Vehicles = Instance.new("UIListLayout", VehicleList)
 UIListLayout_Vehicles.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout_Vehicles.Padding = UDim.new(0,2)
+UIListLayout_Vehicles.Padding = UDim.new(0,6)
+local UIPadding_Vehicles = Instance.new("UIPadding", VehicleList)
+UIPadding_Vehicles.PaddingTop = UDim.new(0,6)
+UIPadding_Vehicles.PaddingLeft = UDim.new(0,6)
 
--- Value list
+-- Value List
 local ValueList = Instance.new("ScrollingFrame")
-ValueList.Size = UDim2.new(0.55, -10, 0.5, -10)
-ValueList.Position = UDim2.new(0.42, 5, 0, 35)
+ValueList.Position = UDim2.new(0.42,5,0,90)
+ValueList.Size = UDim2.new(0.55,-10,0.55,-10)
 ValueList.BackgroundColor3 = Color3.fromRGB(25,25,25)
 ValueList.BorderSizePixel = 0
 ValueList.ScrollBarThickness = 6
 ValueList.Parent = Frame
-
+ValueList.Name = "ValueList"
+Instance.new("UICorner", ValueList).CornerRadius = UDim.new(0,6)
 local UIListLayout_Values = Instance.new("UIListLayout", ValueList)
 UIListLayout_Values.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout_Values.Padding = UDim.new(0,2)
+UIListLayout_Values.Padding = UDim.new(0,6)
+local UIPadding_Values = Instance.new("UIPadding", ValueList)
+UIPadding_Values.PaddingTop = UDim.new(0,6)
+UIPadding_Values.PaddingLeft = UDim.new(0,6)
 
--- TextBox + Apply button
+-- Bottom Frame
+local BottomFrame = Instance.new("Frame")
+BottomFrame.Size = UDim2.new(0.55,-10,0.3,0)
+BottomFrame.Position = UDim2.new(0.42,5,0.63,0)
+BottomFrame.BackgroundTransparency = 1
+BottomFrame.Parent = Frame
+
 local ValueBox = Instance.new("TextBox")
-ValueBox.Size = UDim2.new(0.55, -10, 0, 28)
-ValueBox.Position = UDim2.new(0.42, 5, 0.52, 0)
-ValueBox.PlaceholderText = "Új érték"
+ValueBox.Size = UDim2.new(1,0,0.45,0)
+ValueBox.Position = UDim2.new(0,0,0,0)
+ValueBox.PlaceholderText = ""
 ValueBox.ClearTextOnFocus = false
 ValueBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
 ValueBox.TextColor3 = Color3.fromRGB(255,255,255)
-ValueBox.Font = Enum.Font.Code
-ValueBox.TextSize = 14
-ValueBox.Parent = Frame
+ValueBox.Font = Enum.Font.Gotham
+ValueBox.Text = ""
+ValueBox.TextSize = 16
+ValueBox.Parent = BottomFrame
+Instance.new("UICorner", ValueBox).CornerRadius = UDim.new(0,6)
 
 local ApplyBtn = Instance.new("TextButton")
-ApplyBtn.Size = UDim2.new(0.55, -10, 0, 28)
-ApplyBtn.Position = UDim2.new(0.42, 5, 0.6, 0)
-ApplyBtn.Text = "Apply"
-ApplyBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+ApplyBtn.Size = UDim2.new(1,0,0.45,0)
+ApplyBtn.Position = UDim2.new(0,0,0.55,0)
+ApplyBtn.Text = "✔ Apply"
+ApplyBtn.BackgroundColor3 = Color3.fromRGB(0,140,255)
 ApplyBtn.TextColor3 = Color3.new(1,1,1)
-ApplyBtn.Font = Enum.Font.SourceSans
-ApplyBtn.TextSize = 14
-ApplyBtn.Parent = Frame
+ApplyBtn.Font = Enum.Font.GothamBold
+ApplyBtn.TextSize = 16
+ApplyBtn.Parent = BottomFrame
+Instance.new("UICorner", ApplyBtn).CornerRadius = UDim.new(0,6)
+Instance.new("UIStroke", ApplyBtn).Color = Color3.fromRGB(200,200,200)
 
--- Variables
+-- HUD toggle
+local HudToggleBtn = Instance.new("TextButton")
+HudToggleBtn.Size = UDim2.new(0.2,0,0,28)
+HudToggleBtn.Position = UDim2.new(0.58,5,0.95,-28)
+HudToggleBtn.Text = "HUD: OFF"
+HudToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+HudToggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+HudToggleBtn.Font = Enum.Font.GothamBold
+HudToggleBtn.TextSize = 14
+HudToggleBtn.Parent = Frame
+Instance.new("UICorner", HudToggleBtn).CornerRadius = UDim.new(0,6)
+
+-- Vars
 local selectedVehicle = nil
-local selectedValue = nil -- lehet StringValue vagy NumberValue
+local selectedValue = nil
+local hudEnabled = false
 
--- Update Value list
-local function updateValueList(model)
-for _, child in ipairs(ValueList:GetChildren()) do
-    if child:IsA("TextButton") then
-        child:Destroy()
+-- Styling
+local function styleButton(btn)
+    btn.Size = UDim2.new(1,-8,0,28)
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 16
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(60,60,60)
+    stroke.Thickness = 1
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
+end
+
+-- Reset HUD
+local function resetHUD()
+    hudEnabled = false
+    HudToggleBtn.Text = "HUD: OFF"
+    if selectedVehicle then
+        local seat = selectedVehicle:FindFirstChild("Seats")
+        if seat then
+            local vehicleSeat = seat:FindFirstChild("VehicleSeat")
+            if vehicleSeat and vehicleSeat:FindFirstChild("HeadsUpDisplay") then
+                vehicleSeat.HeadsUpDisplay = false
+            end
+        end
     end
 end
+
+-- Update Value List
+local function updateValueList(model)
+    for _,child in ipairs(ValueList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
     selectedValue = nil
 
     local seat = model:FindFirstChild("Seats")
     if not seat then return end
-
     local vehicleSeat = seat:FindFirstChild("VehicleSeat")
     if not vehicleSeat then return end
 
-    for _, obj in ipairs(vehicleSeat:GetChildren()) do
-        -- Csak StringValue vagy NumberValue típusokra
+    for _,obj in ipairs(vehicleSeat:GetChildren()) do
         if obj:IsA("StringValue") or obj:IsA("NumberValue") then
-            -- Csak a Turbo és MaxSpeed kell
             if obj.Name == "Turbo" or obj.Name == "MaxSpeed" then
                 local btn = Instance.new("TextButton")
-                btn.Size = UDim2.new(1, -6, 0, 22)
-                btn.BackgroundColor3 = Color3.fromRGB(28,28,28)
-                btn.TextColor3 = Color3.fromRGB(220,220,220)
-                btn.Text = obj.Name.." = "..tostring(obj.Value)
-                btn.Font = Enum.Font.SourceSans
-                btn.TextSize = 14
+                if obj.Name == "Turbo" then
+                    local levelsText = {}
+                    for k,v in pairs(TurboLevels) do
+                        table.insert(levelsText,k..":"..v)
+                    end
+                    btn.Text = obj.Name.." = "..tostring(obj.Value).." (Levels: "..table.concat(levelsText,", ")..")"
+                else
+                    btn.Text = obj.Name.." = "..tostring(obj.Value)
+                end
                 btn.Parent = ValueList
-
+                styleButton(btn)
                 btn.MouseButton1Click:Connect(function()
                     selectedValue = obj
                     ValueBox.Text = tostring(obj.Value)
+                    SelectedValueLbl.Text = "Selected Value: " .. obj.Name
+                    resetHUD()
                 end)
             end
         end
     end
 end
 
--- Populate vehicle list
-for _, vehicle in ipairs(vehicle_folder:GetChildren()) do
-    if vehicle:IsA("Model") then
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -6, 0, 22)
-        btn.BackgroundColor3 = Color3.fromRGB(28,28,28)
-        btn.TextColor3 = Color3.fromRGB(220,220,220)
-        btn.Text = vehicle.Name
-        btn.Font = Enum.Font.SourceSans
-        btn.TextSize = 14
-        btn.Parent = VehicleList
-
-        btn.MouseButton1Click:Connect(function()
-            selectedVehicle = vehicle
-            updateValueList(vehicle)
-        end)
+-- Update Vehicle List
+local function updateVehicleList()
+    for _,child in ipairs(VehicleList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for _,vehicle in ipairs(vehicle_folder:GetChildren()) do
+        if vehicle:IsA("Model") and string.find(vehicle.Name,"Car") then
+            local btn = Instance.new("TextButton")
+            btn.Text = vehicle.Name
+            btn.Parent = VehicleList
+            styleButton(btn)
+            btn.MouseButton1Click:Connect(function()
+                selectedVehicle = vehicle
+                SelectedVehicleLbl.Text = "Selected Vehicle: "..vehicle.Name.. " ("..vehicle:GetAttribute("vehicleName")..")"
+                updateValueList(vehicle)
+                resetHUD()
+            end)
+        end
     end
 end
 
-UIListLayout_Vehicles:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    VehicleList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Vehicles.AbsoluteContentSize.Y)
+-- Refresh
+local RefreshBtn = Instance.new("ImageButton")
+RefreshBtn.Size = UDim2.new(0,28,0,28)
+RefreshBtn.Position = UDim2.new(1,-36,0,4)
+RefreshBtn.Image = "rbxassetid://86084882582277"
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+RefreshBtn.ImageColor3 = Color3.new(1,1,1)
+RefreshBtn.Parent = Frame
+RefreshBtn.AutoButtonColor = false
+Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0,4)
+local stroke = Instance.new("UIStroke", RefreshBtn)
+stroke.Color = Color3.fromRGB(60,60,60)
+stroke.Thickness = 1
+RefreshBtn.MouseEnter:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
+RefreshBtn.MouseLeave:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
+RefreshBtn.MouseButton1Click:Connect(function()
+    updateVehicleList()
+    if selectedVehicle then
+        updateValueList(selectedVehicle)
+        ValueBox.Text = ""
+    end
+    resetHUD()
 end)
 
-UIListLayout_Values:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ValueList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Values.AbsoluteContentSize.Y)
+-- HUD toggle
+HudToggleBtn.MouseButton1Click:Connect(function()
+    hudEnabled = not hudEnabled
+    HudToggleBtn.Text = hudEnabled and "HUD: ON" or "HUD: OFF"
+    if selectedVehicle then
+        local seat = selectedVehicle:FindFirstChild("Seats")
+        if seat then
+            local vehicleSeat = seat:FindFirstChild("VehicleSeat")
+            if vehicleSeat then
+                vehicleSeat.HeadsUpDisplay = hudEnabled
+            end
+        end
+    end
 end)
 
--- Apply button
+-- Apply
 ApplyBtn.MouseButton1Click:Connect(function()
     if selectedValue then
         if selectedValue:IsA("StringValue") then
@@ -159,8 +305,21 @@ ApplyBtn.MouseButton1Click:Connect(function()
             local num = tonumber(ValueBox.Text)
             if num then
                 selectedValue.Value = num
-                selectedValue.Parent.MaxSpeed = num
+                selectedValue.Parent.MaxSpeed = math.max(400,num)
             end
         end
+        SelectedValueLbl.Text = "Selected Value: "..selectedValue.Name.." = "..tostring(selectedValue.Value)
+        updateValueList(selectedVehicle)
     end
 end)
+
+-- Scroll updates
+UIListLayout_Vehicles:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    VehicleList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Vehicles.AbsoluteContentSize.Y + 10)
+end)
+UIListLayout_Values:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ValueList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Values.AbsoluteContentSize.Y + 10)
+end)
+
+-- Initial load
+updateVehicleList()

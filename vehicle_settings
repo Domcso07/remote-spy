@@ -1,5 +1,7 @@
 -- Services
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local workspace = game:GetService("Workspace")
@@ -15,12 +17,27 @@ local TurboLevels = {
     [4] = 61.1
 }
 
--- GUI
+-- ===== GUI =====
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "VehicleSettings"
 Gui.IgnoreGuiInset = true
 Gui.ResetOnSpawn = false
 Gui.Parent = playerGui
+
+local function styleButton(btn)
+    btn.Size = UDim2.new(1,-8,0,28)
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 16
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(60,60,60)
+    stroke.Thickness = 1
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
+end
 
 -- Main Frame
 local Frame = Instance.new("Frame")
@@ -32,32 +49,28 @@ Frame.Active = true
 Frame.Draggable = true
 Frame.Parent = Gui
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-local UIStroke = Instance.new("UIStroke", Frame)
-UIStroke.Thickness = 2
-UIStroke.Color = Color3.fromRGB(70,70,70)
+Instance.new("UIStroke", Frame).Color = Color3.fromRGB(70,70,70)
 
 -- Title
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 36)
+Title.Size = UDim2.new(1,0,0,36)
 Title.BackgroundColor3 = Color3.fromRGB(45,45,45)
 Title.Text = "🚗 Vehicle Settings"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.Parent = Frame
-Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", Title).CornerRadius = UDim.new(0,8)
 
 -- Info Box
 local InfoBox = Instance.new("Frame")
-InfoBox.Size = UDim2.new(1, -10, 0, 50)
+InfoBox.Size = UDim2.new(1,-10,0,50)
 InfoBox.Position = UDim2.new(0,5,0,38)
 InfoBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
 InfoBox.BorderSizePixel = 0
 InfoBox.Parent = Frame
 Instance.new("UICorner", InfoBox).CornerRadius = UDim.new(0,6)
-local strokeInfo = Instance.new("UIStroke", InfoBox)
-strokeInfo.Color = Color3.fromRGB(60,60,60)
-strokeInfo.Thickness = 1
+Instance.new("UIStroke", InfoBox).Color = Color3.fromRGB(60,60,60)
 
 -- Selected labels
 local SelectedVehicleLbl = Instance.new("TextLabel")
@@ -162,28 +175,31 @@ HudToggleBtn.TextSize = 14
 HudToggleBtn.Parent = Frame
 Instance.new("UICorner", HudToggleBtn).CornerRadius = UDim.new(0,6)
 
+-- Flight Mode toggle
+local FlightToggleBtn = Instance.new("TextButton")
+FlightToggleBtn.Size = UDim2.new(0.2,0,0,28)
+FlightToggleBtn.Position = UDim2.new(0.8,5,0.95,-28)
+FlightToggleBtn.Text = "Flight: OFF"
+FlightToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+FlightToggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+FlightToggleBtn.Font = Enum.Font.GothamBold
+FlightToggleBtn.TextSize = 14
+FlightToggleBtn.Parent = Frame
+Instance.new("UICorner", FlightToggleBtn).CornerRadius = UDim.new(0,6)
+
 -- Vars
 local selectedVehicle = nil
 local selectedValue = nil
 local hudEnabled = false
+local flightEnabled = false
 
--- Styling
-local function styleButton(btn)
-    btn.Size = UDim2.new(1,-8,0,28)
-    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    btn.TextColor3 = Color3.fromRGB(220,220,220)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 16
-    btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
-    local stroke = Instance.new("UIStroke", btn)
-    stroke.Color = Color3.fromRGB(60,60,60)
-    stroke.Thickness = 1
-    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
-    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
-end
+-- HELI / Flight vars
+local gyro, bv
+local verticalInput = 0
+local currentYaw = 0
+local seated = false
 
--- Reset HUD
+-- === FUNCTIONS ===
 local function resetHUD()
     hudEnabled = false
     HudToggleBtn.Text = "HUD: OFF"
@@ -191,34 +207,71 @@ local function resetHUD()
         local seat = selectedVehicle:FindFirstChild("Seats")
         if seat then
             local vehicleSeat = seat:FindFirstChild("VehicleSeat")
-            if vehicleSeat and vehicleSeat:FindFirstChild("HeadsUpDisplay") then
+            if vehicleSeat then
                 vehicleSeat.HeadsUpDisplay = false
             end
         end
     end
 end
 
--- Update Value List
+local function clearFlight()
+    if gyro then gyro:Destroy() end
+    if bv then bv:Destroy() end
+    gyro, bv = nil, nil
+    flightEnabled = false
+    FlightToggleBtn.Text = "Flight: OFF"
+end
+
+local function setupFlight()
+    if not selectedVehicle then return end
+    local seat = selectedVehicle:FindFirstChild("Seats")
+    if not seat then return end
+    local vehicleSeat = seat:FindFirstChild("VehicleSeat")
+    if not vehicleSeat then return end
+    local body = selectedVehicle.PrimaryPart
+
+    -- BodyGyro
+    gyro = body:FindFirstChild("HeliGyro")
+    if not gyro then
+        gyro = Instance.new("BodyGyro")
+        gyro.Name = "HeliGyro"
+        gyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
+        gyro.P = 1e4
+        gyro.CFrame = body.CFrame
+        gyro.Parent = body
+    end
+
+    -- BodyVelocity
+    bv = body:FindFirstChild("HeliVelocity")
+    if not bv then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "HeliVelocity"
+        bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+        bv.P = 1e4
+        bv.Velocity = Vector3.zero
+        bv.Parent = body
+    end
+
+    flightEnabled = true
+    FlightToggleBtn.Text = "Flight: ON"
+end
+
 local function updateValueList(model)
     for _,child in ipairs(ValueList:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     selectedValue = nil
-
     local seat = model:FindFirstChild("Seats")
     if not seat then return end
     local vehicleSeat = seat:FindFirstChild("VehicleSeat")
     if not vehicleSeat then return end
-
     for _,obj in ipairs(vehicleSeat:GetChildren()) do
         if obj:IsA("StringValue") or obj:IsA("NumberValue") then
             if obj.Name == "Turbo" or obj.Name == "MaxSpeed" then
                 local btn = Instance.new("TextButton")
                 if obj.Name == "Turbo" then
                     local levelsText = {}
-                    for k,v in pairs(TurboLevels) do
-                        table.insert(levelsText,k..":"..v)
-                    end
+                    for k,v in pairs(TurboLevels) do table.insert(levelsText,k..":"..v) end
                     btn.Text = obj.Name.." = "..tostring(obj.Value).." (Levels: "..table.concat(levelsText,", ")..")"
                 else
                     btn.Text = obj.Name.." = "..tostring(obj.Value)
@@ -236,7 +289,6 @@ local function updateValueList(model)
     end
 end
 
--- Update Vehicle List
 local function updateVehicleList()
     for _,child in ipairs(VehicleList:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -249,36 +301,29 @@ local function updateVehicleList()
             styleButton(btn)
             btn.MouseButton1Click:Connect(function()
                 selectedVehicle = vehicle
-                SelectedVehicleLbl.Text = "Selected Vehicle: "..vehicle.Name.. " ("..vehicle:GetAttribute("vehicleName")..")"
+                SelectedVehicleLbl.Text = "Selected Vehicle: "..vehicle.Name
                 updateValueList(vehicle)
                 resetHUD()
+                clearFlight()
             end)
         end
     end
 end
 
--- Refresh
-local RefreshBtn = Instance.new("ImageButton")
-RefreshBtn.Size = UDim2.new(0,28,0,28)
-RefreshBtn.Position = UDim2.new(1,-36,0,4)
-RefreshBtn.Image = "rbxassetid://86084882582277"
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-RefreshBtn.ImageColor3 = Color3.new(1,1,1)
-RefreshBtn.Parent = Frame
-RefreshBtn.AutoButtonColor = false
-Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0,4)
-local stroke = Instance.new("UIStroke", RefreshBtn)
-stroke.Color = Color3.fromRGB(60,60,60)
-stroke.Thickness = 1
-RefreshBtn.MouseEnter:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
-RefreshBtn.MouseLeave:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
-RefreshBtn.MouseButton1Click:Connect(function()
-    updateVehicleList()
-    if selectedVehicle then
+-- Apply button
+ApplyBtn.MouseButton1Click:Connect(function()
+    if selectedValue then
+        if selectedValue:IsA("StringValue") then
+            selectedValue.Value = ValueBox.Text
+        elseif selectedValue:IsA("NumberValue") then
+            local num = tonumber(ValueBox.Text)
+            if num then
+                selectedValue.Value = num
+            end
+        end
+        SelectedValueLbl.Text = "Selected Value: "..selectedValue.Name.." = "..tostring(selectedValue.Value)
         updateValueList(selectedVehicle)
-        ValueBox.Text = ""
     end
-    resetHUD()
 end)
 
 -- HUD toggle
@@ -296,20 +341,13 @@ HudToggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Apply
-ApplyBtn.MouseButton1Click:Connect(function()
-    if selectedValue then
-        if selectedValue:IsA("StringValue") then
-            selectedValue.Value = ValueBox.Text
-        elseif selectedValue:IsA("NumberValue") then
-            local num = tonumber(ValueBox.Text)
-            if num then
-                selectedValue.Value = num
-                selectedValue.Parent.MaxSpeed = math.max(400,num)
-            end
-        end
-        SelectedValueLbl.Text = "Selected Value: "..selectedValue.Name.." = "..tostring(selectedValue.Value)
-        updateValueList(selectedVehicle)
+-- Flight toggle
+FlightToggleBtn.MouseButton1Click:Connect(function()
+    if not selectedVehicle then return end
+    if flightEnabled then
+        clearFlight()
+    else
+        setupFlight()
     end
 end)
 
@@ -321,5 +359,41 @@ UIListLayout_Values:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(func
     ValueList.CanvasSize = UDim2.new(0,0,0,UIListLayout_Values.AbsoluteContentSize.Y + 10)
 end)
 
--- Initial load
+-- ====== Flight Controls ======
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if not flightEnabled then return end
+    if input.KeyCode == Enum.KeyCode.E then verticalInput = 1
+    elseif input.KeyCode == Enum.KeyCode.Q then verticalInput = -1 end
+end)
+
+UserInputService.InputEnded:Connect(function(input, processed)
+    if input.KeyCode == Enum.KeyCode.E or input.KeyCode == Enum.KeyCode.Q then
+        verticalInput = 0
+    end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+    if not flightEnabled or not selectedVehicle then return end
+    local seat = selectedVehicle:FindFirstChild("Seats")
+    if not seat then return end
+    local vehicleSeat = seat:FindFirstChild("VehicleSeat")
+    if not vehicleSeat then return end
+    local body = selectedVehicle.PrimaryPart
+    local throttle = vehicleSeat.Throttle or 0
+    local steer = vehicleSeat.Steer or 0
+
+    -- Yaw
+    currentYaw -= steer * 2 * dt
+    local baseCFrame = CFrame.new(body.Position) * CFrame.Angles(0,currentYaw,0)
+    gyro.CFrame = baseCFrame
+
+    -- Movement
+    local forwardVel = baseCFrame.LookVector * (throttle * 100)
+    local verticalVel = Vector3.new(0, verticalInput * 50, 0)
+    local targetVel = forwardVel + verticalVel
+    bv.Velocity = bv.Velocity:Lerp(targetVel, math.clamp(dt * 5,0,1))
+end)
+
+-- Initial
 updateVehicleList()

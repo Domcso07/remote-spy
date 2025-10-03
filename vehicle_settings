@@ -175,29 +175,7 @@ HudToggleBtn.TextSize = 14
 HudToggleBtn.Parent = Frame
 Instance.new("UICorner", HudToggleBtn).CornerRadius = UDim.new(0,6)
 
--- Refresh
-local RefreshBtn = Instance.new("ImageButton")
-RefreshBtn.Size = UDim2.new(0,28,0,28)
-RefreshBtn.Position = UDim2.new(1,-36,0,4)
-RefreshBtn.Image = "rbxassetid://86084882582277"
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-RefreshBtn.ImageColor3 = Color3.new(1,1,1)
-RefreshBtn.Parent = Frame
-RefreshBtn.AutoButtonColor = false
-Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0,4)
-local stroke = Instance.new("UIStroke", RefreshBtn)
-stroke.Color = Color3.fromRGB(60,60,60)
-stroke.Thickness = 1
-RefreshBtn.MouseEnter:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
-RefreshBtn.MouseLeave:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
-RefreshBtn.MouseButton1Click:Connect(function()
-    updateVehicleList()
-    if selectedVehicle then
-        updateValueList(selectedVehicle)
-        ValueBox.Text = ""
-    end
-    resetHUD()
-end)
+
 
 
 -- Flight Mode toggle
@@ -418,6 +396,30 @@ RunService.RenderStepped:Connect(function(dt)
     local verticalVel = Vector3.new(0, verticalInput * 50, 0)
     local targetVel = forwardVel + verticalVel
     bv.Velocity = bv.Velocity:Lerp(targetVel, math.clamp(dt * 5,0,1))
+end)
+
+-- Refresh
+local RefreshBtn = Instance.new("ImageButton")
+RefreshBtn.Size = UDim2.new(0,28,0,28)
+RefreshBtn.Position = UDim2.new(1,-36,0,4)
+RefreshBtn.Image = "rbxassetid://86084882582277"
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+RefreshBtn.ImageColor3 = Color3.new(1,1,1)
+RefreshBtn.Parent = Frame
+RefreshBtn.AutoButtonColor = false
+Instance.new("UICorner", RefreshBtn).CornerRadius = UDim.new(0,4)
+local stroke = Instance.new("UIStroke", RefreshBtn)
+stroke.Color = Color3.fromRGB(60,60,60)
+stroke.Thickness = 1
+RefreshBtn.MouseEnter:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(50,50,50) end)
+RefreshBtn.MouseLeave:Connect(function() RefreshBtn.BackgroundColor3 = Color3.fromRGB(35,35,35) end)
+RefreshBtn.MouseButton1Click:Connect(function()
+    updateVehicleList()
+    if selectedVehicle then
+        updateValueList(selectedVehicle)
+        ValueBox.Text = ""
+    end
+    resetHUD()
 end)
 
 -- Initial
